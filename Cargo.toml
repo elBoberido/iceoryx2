@@ -49,6 +49,7 @@ members = [
     "benchmarks/publish-subscribe",
     "benchmarks/event",
     "benchmarks/queue",
+    "benchmarks/multi-process-publish-subscribe",
 
     "component-tests/rust",
 ]
