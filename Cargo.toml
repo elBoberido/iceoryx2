@@ -22,6 +22,7 @@ members = [
 
     "benchmarks/publish-subscribe",
     "benchmarks/event"
+    "benchmarks/multi-process-publish-subscribe",
 ]
 
 [workspace.package]
