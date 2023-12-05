@@ -125,6 +125,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "benchmark-multi-process-publish-subscribe"
+version = "0.10.999"
+dependencies = [
+ "clap",
+ "iceoryx2",
+ "iceoryx2-bb-container",
+ "iceoryx2-bb-posix",
+ "iceoryx2-log",
+]
+
+[[package]]
 name = "benchmark-publish-subscribe"
 version = "0.10.999"
 dependencies = [
