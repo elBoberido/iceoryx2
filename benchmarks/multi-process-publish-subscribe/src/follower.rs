@@ -6,6 +6,24 @@ use core::mem::MaybeUninit;
 use std::time::{Duration, SystemTime};
 
 pub fn run_follower_process() -> Result<(), Box<dyn std::error::Error>> {
+    // settings setup
+    let settings_service = zero_copy::Service::new(&ServiceName::new(SETTINGS_SERVICE_NAME)?)
+    .publish_subscribe()
+    .max_publishers(1)
+    .max_subscribers(2)
+    .history_size(0)
+    .subscriber_max_buffer_size(1)
+    .enable_safe_overflow(false)
+    .open_or_create::<SettingsTopic>()?;
+
+    let settings_subscriber = settings_service.subscriber().create()?;
+
+    let settings_event = zero_copy::Service::new(&ServiceName::new(SETTINGS_EVENT_NAME)?)
+    .event()
+    .open_or_create()?;
+
+    let mut settings_listener = settings_event.listener().create()?;
+
     // follower setup
     let follower_service = zero_copy::Service::new(&ServiceName::new(FOLLOWER_SERVICE_NAME)?)
         .publish_subscribe()
@@ -52,6 +70,12 @@ pub fn run_follower_process() -> Result<(), Box<dyn std::error::Error>> {
 
     // signal ready to main process
     ready_notifier.notify_with_custom_event_id(FOLLOWER_READY_EVENT_ID)?;
+
+    // wait for settings
+    match settings_listener.timed_wait(Duration::from_secs(2)) {
+        Ok(_) => { /* nothing to do */ }
+        Err(e) => Err(format!("Error while waiting for settings: {:?}", e))?,
+    }
 
     let mut i = 0;
     let mut finished = false;
