@@ -182,7 +182,7 @@ fn run_main_process(iterations: usize) -> Result<(), Box<dyn std::error::Error>>
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let params = params::Params::parse();
 
-    set_log_level(iceoryx2_bb_log::LogLevel::Debug);
+    set_log_level(iceoryx2_bb_log::LogLevel::Trace);
 
     if params.leader {
         leader::run_leader_process()?;
