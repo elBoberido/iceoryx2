@@ -23,17 +23,17 @@ fn run_main_process(iterations: usize) -> Result<(), Box<dyn std::error::Error>>
         .event()
         .open_or_create()?;
 
-    let mut ready_listener = ready_event.listener().create()?;
+    let ready_listener = ready_event.listener().create()?;
 
     // settings setup
     let settings_service = zero_copy::Service::new(&ServiceName::new(SETTINGS_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<SettingsTopic>()
         .max_publishers(1)
         .max_subscribers(2)
         .history_size(0)
         .subscriber_max_buffer_size(1)
         .enable_safe_overflow(false)
-        .open_or_create::<SettingsTopic>()?;
+        .open_or_create()?;
 
     let settings_publisher = settings_service.publisher().create()?;
 
@@ -45,13 +45,13 @@ fn run_main_process(iterations: usize) -> Result<(), Box<dyn std::error::Error>>
 
     // latency result setup
     let latency_service = zero_copy::Service::new(&ServiceName::new(LATENCY_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<LatencyTopic>()
         .max_publishers(2)
         .max_subscribers(1)
         .history_size(0)
         .subscriber_max_buffer_size(2)
         .enable_safe_overflow(false)
-        .open_or_create::<LatencyTopic>()?;
+        .open_or_create()?;
 
     let latency_subscriber = latency_service.subscriber().create()?;
 
@@ -66,20 +66,16 @@ fn run_main_process(iterations: usize) -> Result<(), Box<dyn std::error::Error>>
     let mut follower_ready = false;
     let wait_for_ready_start_time = SystemTime::now();
     loop {
-        match ready_listener.timed_wait(Duration::from_secs(1)) {
-            Ok(event_ids) => {
-                for &id in event_ids {
-                    match id {
-                        LEADER_READY_EVENT_ID => {
-                            leader_ready = true;
-                        }
-                        FOLLOWER_READY_EVENT_ID => {
-                            follower_ready = true;
-                        }
-                        _ => Err(format!("Received invalid event id: {:?}", id))?,
-                    }
+        match ready_listener.timed_wait_one(Duration::from_secs(1)) {
+            Ok(Some(id)) => match id {
+                LEADER_READY_EVENT_ID => {
+                    leader_ready = true;
                 }
-            }
+                FOLLOWER_READY_EVENT_ID => {
+                    follower_ready = true;
+                }
+                _ => Err(format!("Received invalid event id: {:?}", id))?,
+            },
             _ => {}
         }
 
@@ -182,7 +178,7 @@ fn run_main_process(iterations: usize) -> Result<(), Box<dyn std::error::Error>>
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let params = params::Params::parse();
 
-    set_log_level(iceoryx2_bb_log::LogLevel::Trace);
+    set_log_level(iceoryx2_bb_log::LogLevel::Info);
 
     if params.leader {
         leader::run_leader_process()?;

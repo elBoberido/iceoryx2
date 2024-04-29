@@ -9,13 +9,13 @@ use std::time::SystemTime;
 pub fn run_leader_process() -> Result<(), Box<dyn std::error::Error>> {
     // settings setup
     let settings_service = zero_copy::Service::new(&ServiceName::new(SETTINGS_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<SettingsTopic>()
         .max_publishers(1)
         .max_subscribers(2)
         .history_size(0)
         .subscriber_max_buffer_size(1)
         .enable_safe_overflow(false)
-        .open_or_create::<SettingsTopic>()?;
+        .open_or_create()?;
 
     let settings_subscriber = settings_service.subscriber().create()?;
 
@@ -27,37 +27,37 @@ pub fn run_leader_process() -> Result<(), Box<dyn std::error::Error>> {
 
     // leader setup
     let leader_service = zero_copy::Service::new(&ServiceName::new(LEADER_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<BenchTopic<1024>>()
         .max_publishers(1)
         .max_subscribers(1)
         .history_size(0)
         .subscriber_max_buffer_size(1)
         .enable_safe_overflow(false)
-        .open_or_create::<BenchTopic<1024>>()?;
+        .open_or_create()?;
 
     let leader_publisher = leader_service.publisher().create()?;
 
     // follower setup
     let follower_service = zero_copy::Service::new(&ServiceName::new(FOLLOWER_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<BenchTopic<1024>>()
         .max_publishers(1)
         .max_subscribers(1)
         .history_size(0)
         .subscriber_max_buffer_size(1)
         .enable_safe_overflow(false)
-        .open_or_create::<BenchTopic<1024>>()?;
+        .open_or_create()?;
 
     let follower_subscriber = follower_service.subscriber().create()?;
 
     // latency result setup
     let latency_service = zero_copy::Service::new(&ServiceName::new(LATENCY_SERVICE_NAME)?)
-        .publish_subscribe()
+        .publish_subscribe::<LatencyTopic>()
         .max_publishers(2)
         .max_subscribers(1)
         .history_size(0)
         .subscriber_max_buffer_size(2)
         .enable_safe_overflow(false)
-        .open_or_create::<LatencyTopic>()?;
+        .open_or_create()?;
 
     let latency_publisher = latency_service.publisher().create()?;
     let mut latency_sample = latency_publisher.loan()?;
@@ -73,7 +73,7 @@ pub fn run_leader_process() -> Result<(), Box<dyn std::error::Error>> {
     ready_notifier.notify_with_custom_event_id(LEADER_READY_EVENT_ID)?;
 
     // wait for settings
-    match settings_listener.timed_wait(Duration::from_secs(2)) {
+    match settings_listener.timed_wait_one(Duration::from_secs(2)) {
         Ok(_) => { /* nothing to do */ }
         Err(e) => Err(format!("Error while waiting for settings: {:?}", e))?,
     }
