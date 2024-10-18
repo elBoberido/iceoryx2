@@ -13,6 +13,7 @@
 package(default_visibility = ["//visibility:public"])
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_rust//bindgen:bindgen.bzl", "rust_bindgen_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test_suite")
 
@@ -30,6 +31,7 @@ cc_library(
         "src/c/socket_macros.c",
     ],
     hdrs = glob(["src/c/**"]),
+    includes = ["src/c"],
     strip_include_prefix = "src/c",
     linkstatic = True,
     visibility = ["//visibility:public"],
@@ -37,7 +39,7 @@ cc_library(
 
 # Generate the Rust binding file
 genrule(
-    name = "iceoryx2-pal-posix-bindgen",
+    name = "iceoryx2-pal-posix-bindgen-prebuilt",
     srcs = [
         "src/c/posix.h",
         "@bindgen//:bindgen-cli",
@@ -51,11 +53,26 @@ cargo_build_script(
     srcs = ["bazel_bindgen_workaround.rs"],
 )
 
+# This will generate 'posix_generated__bindgen.rs'
+rust_bindgen_library(
+    name = "posix_generated",
+    bindgen_flags = [
+        "--blocklist-type=max_align_t",
+    ],
+    cc_lib = "iceoryx2-pal-posix-c-lib",
+    header = "src/c/posix.h",
+    clang_flags = ["-I /usr/include"],
+    #wrap_static_fns = True,
+)
+
+# TODO: add genrule to copy posix_generated__bindgen.rs to posix_generated.rs
+# TODO: add config option to switch between prebuilt-bindgen and rust_bindgen_library
+
 # Create the actual crate
 rust_library(
     name = "iceoryx2-pal-posix",
     srcs = glob(["src/**/*.rs"]),
-    compile_data = [ "posix_generated.rs" ],
+    compile_data = [ ":posix_generated.rs" ],
     deps = [
         "//iceoryx2-pal/concurrency-sync:iceoryx2-pal-concurrency-sync",
         "//iceoryx2-pal/configuration:iceoryx2-pal-configuration",
