@@ -14,6 +14,7 @@ version = { workspace = true }
 iceoryx2 = { workspace = true }
 iceoryx2-bb-container = { workspace = true }
 iceoryx2-bb-log = { workspace = true }
+iceoryx2-bb-posix = { workspace = true }
 iceoryx2-bb-system-types = { workspace = true }
 clap = { workspace = true }
 
@@ -48,6 +49,9 @@ path = "rust/event/notifier.rs"
 [[example]]
 name = "event_multiplexing_notifier"
 path = "rust/event_multiplexing/notifier.rs"
+[[example]]
+name = "event_multiplexing_socket"
+path = "rust/event_multiplexing/socket.rs"
 
 [[example]]
 name = "event_multiplexing_wait"

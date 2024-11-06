@@ -12,7 +12,12 @@
 
 use clap::Parser;
 use iceoryx2::{port::listener::Listener, prelude::*};
-use std::collections::HashMap;
+use iceoryx2_bb_container::semantic_string::SemanticString;
+use iceoryx2_bb_posix::file_descriptor::FileDescriptorBased;
+use iceoryx2_bb_posix::permission::*;
+use iceoryx2_bb_posix::unix_datagram_socket::*;
+use iceoryx2_bb_system_types::file_path::FilePath;
+use std::{alloc::GlobalAlloc, collections::HashMap, time::Duration};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -45,17 +50,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // attach all listeners to the waitset and store the guard
     for (service, listener) in &listeners {
+        let fd = (*listener).file_descriptor();
         let guard = waitset.attach_notification(listener)?;
         listener_attachments.insert(WaitSetAttachmentId::from_guard(&guard), (service, listener));
         guards.push(guard);
     }
+
+    let socket_name = FilePath::new(b"mySocket").unwrap();
+    let receiver = UnixDatagramReceiverBuilder::new(&socket_name)
+        .permission(Permission::OWNER_ALL)
+        .creation_mode(CreationMode::PurgeAndCreate)
+        .create()
+        .unwrap();
+
+    let socket_guard = waitset.attach_notification(&receiver)?;
+    let socket_id = WaitSetAttachmentId::from_guard(&socket_guard);
 
     println!("Waiting on the following services: {:?}", args.services);
 
     // the callback that is called when a listener has received an event
     let on_event = |attachment_id: WaitSetAttachmentId<ipc::Service>| {
         if let Some((service_name, listener)) = listener_attachments.get(&attachment_id) {
-            print!("Received trigger from \"{}\" ::", service_name);
+            print!("#### Received trigger from \"{}\" ::", service_name);
 
             // IMPORTANT:
             // We need to collect all notifications since the WaitSet will wake us up as long as
@@ -68,6 +84,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
 
             println!("");
+        } else if attachment_id == socket_id {
+            println!("#### Received trigger from UnixDatagrammSocket");
+            let mut recv_data: Vec<u8> = vec![];
+            recv_data.resize(5, 0);
+            receiver.try_receive(recv_data.as_mut_slice()).unwrap();
+            println!("Received data: {:?}", recv_data);
         }
     };
 
