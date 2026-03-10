@@ -14,6 +14,7 @@ extern crate iceoryx2_bb_loggers;
 
 use iceoryx2_bb_container::vector::relocatable_vec::*;
 use iceoryx2_bb_elementary::bump_allocator::BumpAllocator;
+use iceoryx2_bb_elementary_traits::allocator::BaseAllocator;
 use iceoryx2_bb_testing::assert_that;
 
 #[test]
@@ -103,4 +104,113 @@ fn two_vectors_with_different_len_are_not_equal() {
     sut_2.pop();
 
     assert_that!(sut_1, ne sut_2);
+}
+
+#[test]
+fn ptr_provenance_test_stack_separated() {
+    const CAPACITY: usize = 10;
+    let mut memory = [0u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)];
+    let mut sut = unsafe { RelocatableVec::<usize>::new_uninit(CAPACITY) };
+
+    let bump_allocator = BumpAllocator::new(memory.as_mut_ptr());
+    // no warning/error when using heap
+    // let mut sut = Box::new(unsafe { RelocatableVec::<usize>::new_uninit(CAPACITY) });
+    unsafe { sut.init(&bump_allocator).unwrap() };
+
+    assert_that!(sut.push(0), is_ok);
+    // drop(sut);
+
+    unsafe {
+        core::ptr::drop_in_place(&mut sut as *mut _);
+    }
+    core::mem::forget(sut);
+}
+
+#[test]
+fn ptr_provenance_test_stack_stack_bundled() {
+    const CAPACITY: usize = 10;
+
+    struct Bundle {
+        sut: RelocatableVec<usize>,
+        memory: [u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)],
+    }
+
+    let mut b = Bundle {
+        sut: unsafe { RelocatableVec::<usize>::new_uninit(CAPACITY) },
+        memory: [0u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)],
+    };
+
+    let bump_allocator = BumpAllocator::new(b.memory.as_mut_ptr());
+
+    unsafe { b.sut.init(&bump_allocator).unwrap() };
+
+    assert_that!(b.sut.push(0), is_ok);
+    // drop(b.sut);
+
+    unsafe {
+        core::ptr::drop_in_place(&mut b.sut as *mut _);
+    }
+    core::mem::forget(b.sut);
+}
+
+#[test]
+fn ptr_provenance_test_heap_bundled() {
+    const CAPACITY: usize = 10;
+
+    #[repr(C)]
+    struct Bundle {
+        sut: RelocatableVec<usize>,
+        memory: [u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)],
+    }
+
+    let mut b = Box::new(Bundle {
+        sut: unsafe { RelocatableVec::<usize>::new_uninit(CAPACITY) },
+        memory: [0u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)],
+    });
+
+    let bump_allocator = BumpAllocator::new(b.memory.as_mut_ptr());
+
+    unsafe { b.sut.init(&bump_allocator).unwrap() };
+
+    assert_that!(b.sut.push(0), is_ok);
+    // drop(b.sut);
+
+    unsafe {
+        core::ptr::drop_in_place(&mut b.sut as *mut _);
+    }
+    core::mem::forget(b.sut);
+}
+
+#[test]
+fn ptr_provenance_test_heap_separate() {
+    const CAPACITY: usize = 10;
+
+    let mut shm = [0u8; RelocatableVec::<usize>::const_memory_size(CAPACITY) * 10];
+
+    let shm_alloc = BumpAllocator::new(shm.as_mut_ptr());
+
+    let mut memory = shm_alloc
+        .allocate(core::alloc::Layout::new::<
+            [u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)],
+        >())
+        .unwrap()
+        .cast::<[u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)]>();
+
+    unsafe { memory.write([0u8; RelocatableVec::<usize>::const_memory_size(CAPACITY)]) };
+
+    let mut sut = shm_alloc
+        .allocate(core::alloc::Layout::new::<RelocatableVec<usize>>())
+        .unwrap()
+        .cast::<RelocatableVec<usize>>();
+
+    unsafe { sut.write(RelocatableVec::<usize>::new_uninit(CAPACITY)) };
+
+    unsafe {
+        let bump_allocator = BumpAllocator::new((*memory.as_mut()).as_mut_ptr());
+
+        sut.as_mut().init(&bump_allocator).unwrap();
+
+        assert_that!((*sut.as_ptr()).push(0), is_ok);
+        core::ptr::drop_in_place(sut.as_ptr());
+    }
 }
