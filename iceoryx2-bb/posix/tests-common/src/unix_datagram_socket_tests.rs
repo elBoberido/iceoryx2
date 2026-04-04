@@ -188,7 +188,7 @@ fn blocking_send_blocks() {
     let handle_2 = BarrierHandle::new();
     let barrier = BarrierBuilder::new(2).create(&handle).unwrap();
     let barrier_2 = BarrierBuilder::new(2).create(&handle_2).unwrap();
-    let send_data: Vec<u8> = vec![1u8, 3u8, 3u8, 7u8, 13u8, 73u8];
+    let mut send_data: Vec<u8> = vec![1u8, 3u8, 3u8, 7u8, 13u8];
 
     thread_scope(|s| {
         s.thread_builder().spawn(|| {
@@ -197,11 +197,20 @@ fn blocking_send_blocks() {
                 .create()
                 .unwrap();
 
-            while let Ok(true) = sut_sender.try_send(send_data.as_slice()) {}
+            let mut counter = 1;
+            while let Ok(true) = {
+                send_data[0] = counter;
+                (counter, _) = counter.overflowing_add(1);
+                sut_sender.try_send(send_data.as_slice())
+            } {}
 
             let start = Time::now().unwrap();
             barrier_2.wait();
-
+            send_data[1] = 42;
+            send_data[2] = 42;
+            send_data[3] = 42;
+            send_data[4] = 42;
+            send_data.push(42);
             let result = sut_sender.blocking_send(send_data.as_slice());
 
             assert_that!(result, is_ok);
@@ -220,7 +229,11 @@ fn blocking_send_blocks() {
 
         let mut receive_data: Vec<u8> = vec![0, 0, 0, 0, 0, 0];
         while let Ok(count) = sut_receiver.try_receive(receive_data.as_mut_slice()) {
+            eprintln!("#### {:?}: {:?}", count, receive_data);
             if count == 0 {
+                //     nanosleep(TIMEOUT).unwrap();
+                // }
+                // if count == 7 {
                 break;
             }
         }

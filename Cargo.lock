@@ -939,6 +939,7 @@ dependencies = [
  "iceoryx2-cal",
  "iceoryx2-log",
  "iceoryx2-services-discovery",
+ "libc",
 ]
 
 [[package]]

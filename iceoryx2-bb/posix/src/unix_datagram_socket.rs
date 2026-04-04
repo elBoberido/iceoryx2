@@ -304,7 +304,7 @@ const BLOCKING_TIMEOUT: Duration = Duration::from_secs(i16::MAX as _);
 struct UnixDatagramSocket {
     name: FilePath,
     is_non_blocking: AtomicBool,
-    file_descriptor: FileDescriptor,
+    pub file_descriptor: FileDescriptor,
 }
 
 impl UnixDatagramSocket {
@@ -340,6 +340,7 @@ impl UnixDatagramSocket {
             0,
             "Unable to acquire current socket filedescriptor flags",
         )?;
+        eprintln!("#### nonblock: {}", posix::O_NONBLOCK);
         let new_flags = match value {
             true => current_flags | posix::O_NONBLOCK,
             false => current_flags & !posix::O_NONBLOCK,
@@ -687,6 +688,65 @@ impl UnixDatagramSender {
     }
 
     fn send(&self, data: &[u8]) -> Result<bool, UnixDatagramSendError> {
+        let mut bufsize = 0i32;
+        let mut len = 0u32;
+        if unsafe {
+            posix::getsockopt(
+                self.socket.file_descriptor.native_handle(),
+                posix::SOL_SOCKET,
+                posix::SO_SNDBUF,
+                &mut bufsize as *mut _ as *mut _,
+                &mut len as *mut _,
+            )
+        } == 0
+        {
+            eprintln!("#### send buffer size: {} [{}]", bufsize, len);
+        }
+        let mut bufsize = 0i32;
+        let mut len = 0u32;
+        if unsafe {
+            posix::getsockopt(
+                self.socket.file_descriptor.native_handle(),
+                posix::SOL_SOCKET,
+                posix::SO_RCVBUF,
+                &mut bufsize as *mut _ as *mut _,
+                &mut len as *mut _,
+            )
+        } == 0
+        {
+            eprintln!("#### receive buffer size: {} [{}]", bufsize, len);
+        }
+
+        if unsafe {
+            let bufsize = 2048i32;
+            // let bufsize = 4096i32;
+            posix::setsockopt(
+                self.socket.file_descriptor.native_handle(),
+                posix::SOL_SOCKET,
+                posix::SO_SNDBUF,
+                (&bufsize as *const i32) as *const posix::void,
+                4,
+            )
+        } != 0
+        {
+            eprintln!("Could not set send buffer");
+        }
+
+        if unsafe {
+            // let bufsize = 2048i32;
+            let bufsize = 4096i32;
+            posix::setsockopt(
+                self.socket.file_descriptor.native_handle(),
+                posix::SOL_SOCKET,
+                posix::SO_RCVBUF,
+                (&bufsize as *const i32) as *const posix::void,
+                4,
+            )
+        } != 0
+        {
+            eprintln!("Could not set receive buffer");
+        }
+
         let bytes_sent = unsafe {
             posix::sendto(
                 self.socket.file_descriptor.native_handle(),
@@ -701,7 +761,7 @@ impl UnixDatagramSender {
         let msg = "Unable to send message";
         if bytes_sent < 0 {
             handle_errno!(UnixDatagramSendError, from self,
-                success Errno::EAGAIN => false,
+                success Errno::EAGAIN => { eprintln!("#### aaaaargh"); false },
                 Errno::ECONNRESET => (ConnectionReset, "{} since the connection was reset by peer.", msg),
                 Errno::ECONNREFUSED => (ConnectionRefused, "{} since the connection was refused by peer.", msg),
                 Errno::EINTR => (Interrupt, "{} since an interrupt signal was received.", msg),
