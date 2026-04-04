@@ -73,6 +73,28 @@ fn main() -> Result<()> {
         return Err(Error::last_os_error());
     }
 
+    let mut sndbuf: c_int = 0;
+    let mut sndbuf_len = size_of::<c_int>() as socklen_t;
+    let mut rcvbuf: c_int = 0;
+    let mut rcvbuf_len = size_of::<c_int>() as socklen_t;
+    unsafe {
+        libc::getsockopt(
+            sock_fd,
+            SOL_SOCKET,
+            SO_SNDBUF,
+            &mut sndbuf as *mut _ as *mut c_void,
+            &mut sndbuf_len,
+        );
+        libc::getsockopt(
+            sock_fd,
+            SOL_SOCKET,
+            SO_RCVBUF,
+            &mut rcvbuf as *mut _ as *mut c_void,
+            &mut rcvbuf_len,
+        );
+    }
+    println!("#### [OLD] SNDBUF: {}, RCVBUF: {}", sndbuf, rcvbuf);
+
     // Set socket options: SNDBUF and RCVBUF
     let sndbuf_size: c_int = 1024 * 16;
     let rcvbuf_size: c_int = 1024 * 4;
@@ -136,21 +158,27 @@ fn main() -> Result<()> {
             &mut rcvbuf_len,
         );
     }
-    println!("SNDBUF: {}, RCVBUF: {}", sndbuf, rcvbuf);
+    println!("#### [NEW] SNDBUF: {}, RCVBUF: {}", sndbuf, rcvbuf);
 
     // Bind socket to a path
-    let sock_path = c"/tmp/ud_sock_2";
+    let sock_path = c"/tmp/ud_sock_3";
     let sock_path = unsafe {
         let bytes = sock_path.to_bytes_with_nul();
         std::slice::from_raw_parts(bytes.as_ptr() as *const i8, bytes.len())
     };
     let addr = sockaddr_un {
-        sun_family: AF_UNIX as u16,
+        sun_family: AF_UNIX as _,
         sun_path: [0i8; 108],
+        #[cfg(target_os = "freebsd")]
+        sun_path: [0i8; 180],
+        #[cfg(target_os = "freebsd")]
+        sun_length: 0,
     };
     let mut addr = addr;
     addr.sun_path[..sock_path.len()].copy_from_slice(&sock_path);
     let addr_len = size_of::<sockaddr_un>() as socklen_t;
+    #[cfg(target_os = "freebsd")]
+    addr.sun_length = addr_len;
 
     if unsafe { libc::bind(sock_fd, &addr as *const _ as *const _, addr_len) } < 0 {
         return Err(Error::last_os_error());
