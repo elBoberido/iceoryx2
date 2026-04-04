@@ -168,17 +168,18 @@ fn main() -> Result<()> {
     };
     let addr = sockaddr_un {
         sun_family: AF_UNIX as _,
+        #[cfg(not(target_os = "freebsd"))]
         sun_path: [0i8; 108],
         #[cfg(target_os = "freebsd")]
-        sun_path: [0i8; 180],
+        sun_path: [0i8; 104],
         #[cfg(target_os = "freebsd")]
-        sun_length: 0,
+        sun_len: 0,
     };
     let mut addr = addr;
     addr.sun_path[..sock_path.len()].copy_from_slice(&sock_path);
     let addr_len = size_of::<sockaddr_un>() as socklen_t;
     #[cfg(target_os = "freebsd")]
-    addr.sun_length = addr_len;
+    addr.sun_len = addr_len;
 
     if unsafe { libc::bind(sock_fd, &addr as *const _ as *const _, addr_len) } < 0 {
         return Err(Error::last_os_error());
