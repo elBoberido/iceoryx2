@@ -179,7 +179,9 @@ fn main() -> Result<()> {
     addr.sun_path[..sock_path.len()].copy_from_slice(&sock_path);
     let addr_len = size_of::<sockaddr_un>() as socklen_t;
     #[cfg(target_os = "freebsd")]
-    addr.sun_len = addr_len as _;
+    {
+        addr.sun_len = addr_len as _;
+    }
 
     if unsafe { libc::bind(sock_fd, &addr as *const _ as *const _, addr_len) } < 0 {
         return Err(Error::last_os_error());
