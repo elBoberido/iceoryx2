@@ -117,7 +117,7 @@ fn main() -> Result<()> {
 
     // Set timeouts (1 second)
     let timeout = timeval {
-        tv_sec: 1,
+        tv_sec: 10,
         tv_usec: 0,
     };
     unsafe {
@@ -161,7 +161,7 @@ fn main() -> Result<()> {
     println!("#### [NEW] SNDBUF: {}, RCVBUF: {}", sndbuf, rcvbuf);
 
     // Bind socket to a path
-    let sock_path = c"/tmp/ud_sock_3";
+    let sock_path = c"/tmp/ud_sock_5";
     let sock_path = unsafe {
         let bytes = sock_path.to_bytes_with_nul();
         std::slice::from_raw_parts(bytes.as_ptr() as *const i8, bytes.len())
