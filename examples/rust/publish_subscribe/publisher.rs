@@ -115,27 +115,27 @@ fn main() -> Result<()> {
         );
     }
 
-    // Set timeouts (1 second)
-    let timeout = timeval {
-        tv_sec: 10,
-        tv_usec: 0,
-    };
-    unsafe {
-        libc::setsockopt(
-            sock_fd,
-            SOL_SOCKET,
-            SO_RCVTIMEO,
-            &timeout as *const _ as *const c_void,
-            size_of::<timeval>() as socklen_t,
-        );
-        libc::setsockopt(
-            sock_fd,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            &timeout as *const _ as *const c_void,
-            size_of::<timeval>() as socklen_t,
-        );
-    }
+    // // Set timeouts (1 second)
+    // let timeout = timeval {
+    //     tv_sec: 10,
+    //     tv_usec: 0,
+    // };
+    // unsafe {
+    //     libc::setsockopt(
+    //         sock_fd,
+    //         SOL_SOCKET,
+    //         SO_RCVTIMEO,
+    //         &timeout as *const _ as *const c_void,
+    //         size_of::<timeval>() as socklen_t,
+    //     );
+    //     libc::setsockopt(
+    //         sock_fd,
+    //         SOL_SOCKET,
+    //         SO_SNDTIMEO,
+    //         &timeout as *const _ as *const c_void,
+    //         size_of::<timeval>() as socklen_t,
+    //     );
+    // }
 
     // Get current SNDBUF and RCVBUF
     let mut sndbuf: c_int = 0;
