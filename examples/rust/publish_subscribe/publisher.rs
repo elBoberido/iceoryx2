@@ -73,6 +73,16 @@ fn main() -> Result<()> {
         return Err(Error::last_os_error());
     }
 
+    let flags = unsafe { libc::fcntl(sock_fd, libc::F_GETFL, 0) };
+    if flags < 0 {
+        return Err(Error::last_os_error());
+    }
+    if flags & libc::O_NONBLOCK != 0 {
+        if unsafe { libc::fcntl(sock_fd, libc::F_SETFL, flags & !libc::O_NONBLOCK) } < 0 {
+            return Err(Error::last_os_error());
+        }
+    }
+
     let mut sndbuf: c_int = 0;
     let mut sndbuf_len = size_of::<c_int>() as socklen_t;
     let mut rcvbuf: c_int = 0;
