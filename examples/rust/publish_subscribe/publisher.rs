@@ -161,7 +161,7 @@ fn main() -> Result<()> {
     println!("#### [NEW] SNDBUF: {}, RCVBUF: {}", sndbuf, rcvbuf);
 
     // Bind socket to a path
-    let sock_path = c"/tmp/ud_sock_5";
+    let sock_path = c"/tmp/ud_sock";
     let sock_path = unsafe {
         let bytes = sock_path.to_bytes_with_nul();
         std::slice::from_raw_parts(bytes.as_ptr() as *const i8, bytes.len())
@@ -189,14 +189,18 @@ fn main() -> Result<()> {
 
     // Spawn sender thread
     let sender_fd = sock_fd;
-    thread::spawn(move || {
-        let msg = CString::new("Hello from sender!").unwrap();
+    thread::spawn(move ||{
+        let mut counter = 0u8;
+        let mut msg = [0x00, 0x13, 0x13, 0x42, 0x73];
         loop {
+            counter = counter.wrapping_add(1);
+            msg[0] = counter;
+            eprintln!("####");
             let bytes_sent = unsafe {
                 libc::sendto(
                     sender_fd,
                     msg.as_ptr() as *const c_void,
-                    msg.as_bytes().len(),
+                    msg.len(),
                     0,
                     &addr as *const _ as *const _,
                     addr_len,
@@ -204,9 +208,9 @@ fn main() -> Result<()> {
             };
             if bytes_sent < 0 {
                 eprintln!("Send error: {:?}", Error::last_os_error());
-                break;
+            } else {
+                eprintln!("Sent {} bytes", bytes_sent);
             }
-            println!("Sent {} bytes", bytes_sent);
             thread::sleep(Duration::from_millis(100));
         }
     });
@@ -228,7 +232,7 @@ fn main() -> Result<()> {
             eprintln!("Receive error: {:?}", Error::last_os_error());
             break;
         }
-        println!(
+        eprintln!(
             "Received {} bytes: {:?}",
             bytes_received,
             &buf[..bytes_received as usize]
