@@ -25,7 +25,10 @@ iceoryx2-bb-elementary-traits = { workspace = true }
 iceoryx2-bb-system-types = { workspace = true, features = ["std"] }
 iceoryx2-bb-posix = { workspace = true, features = ["std"] }
 
+clap = { workspace = true }
+etm = { workspace = true }
 flatbuffers = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
 clap = { workspace = true }
@@ -117,6 +120,20 @@ path = "rust/domains/subscriber.rs"
 [[example]]
 name = "domains_discovery"
 path = "rust/domains/discovery.rs"
+
+# etm
+[[example]]
+name = "ping"
+path = "rust/etm-gateway/ping.rs"
+[[example]]
+name = "pong"
+path = "rust/etm-gateway/pong.rs"
+[[example]]
+name = "ping-pong-client"
+path = "rust/etm-gateway/ping_pong_client.rs"
+[[example]]
+name = "ping-pong-server"
+path = "rust/etm-gateway/ping_pong_server.rs"
 
 # event
 
