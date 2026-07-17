@@ -10,8 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use core::mem::MaybeUninit;
-
+use iceoryx2::payload_uninit::PayloadUninit;
 use iceoryx2::service::marker::{CustomHeaderMarker, CustomPayloadMarker};
 use iceoryx2_log::fatal_panic;
 use pyo3::prelude::*;
@@ -25,12 +24,12 @@ use crate::{
 
 type IpcResponseMutUninit = iceoryx2::response_mut_uninit::ResponseMutUninit<
     crate::IpcService,
-    [MaybeUninit<CustomPayloadMarker>],
+    [PayloadUninit<CustomPayloadMarker>],
     CustomHeaderMarker,
 >;
 type LocalResponseMutUninit = iceoryx2::response_mut_uninit::ResponseMutUninit<
     crate::LocalService,
-    [MaybeUninit<CustomPayloadMarker>],
+    [PayloadUninit<CustomPayloadMarker>],
     CustomHeaderMarker,
 >;
 

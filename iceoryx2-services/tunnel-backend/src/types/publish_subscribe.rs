@@ -10,14 +10,12 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use core::mem::MaybeUninit;
-
 use iceoryx2::service::marker::CustomHeaderMarker;
 use iceoryx2::service::marker::CustomPayloadMarker;
 
 pub type Header = CustomHeaderMarker;
 pub type Payload = [CustomPayloadMarker];
-pub type PayloadUninit = [MaybeUninit<CustomPayloadMarker>];
+pub type PayloadUninit = [iceoryx2::payload_uninit::PayloadUninit<CustomPayloadMarker>];
 
 pub type Sample<S> = iceoryx2::sample::Sample<S, Payload, Header>;
 pub type SampleMut<S> = iceoryx2::sample_mut::SampleMut<S, Payload, Header>;

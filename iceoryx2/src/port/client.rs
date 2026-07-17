@@ -73,7 +73,7 @@
 //! ```
 
 use core::ptr::NonNull;
-use core::{any::TypeId, fmt::Debug, marker::PhantomData, mem::MaybeUninit};
+use core::{any::TypeId, fmt::Debug, marker::PhantomData};
 use iceoryx2_bb_container::{queue::Queue, slotmap::SlotMap, vector::polymorphic_vec::*};
 
 use iceoryx2_bb_concurrency::atomic::Ordering;
@@ -98,6 +98,7 @@ use crate::service::marker::{CustomHeaderMarker, CustomPayloadMarker};
 use crate::service::resource::NoResource;
 use crate::{
     identifiers::UniqueClientId,
+    payload_uninit::PayloadUninit,
     pending_response::PendingResponse,
     port::{
         details::data_segment::DataSegment, port_name::PortName,
@@ -708,7 +709,7 @@ impl<
     ///
     /// let mut request = client.loan_uninit()?;
     ///
-    /// // Use MaybeUninit API to populate the underlying payload
+    /// // Use PayloadUninit API to populate the underlying payload
     /// request.payload_mut().write(1234);
     /// // Promise that we have initialized everything and initialize request
     /// let request = unsafe { request.assume_init() };
@@ -749,7 +750,7 @@ impl<
     ) -> Result<
         RequestMutUninit<
             Service,
-            MaybeUninit<RequestPayload>,
+            PayloadUninit<RequestPayload>,
             RequestHeader,
             ResponsePayload,
             ResponseHeader,
@@ -787,7 +788,7 @@ impl<
             RawSampleMut::<
                 service::header::request_response::RequestHeader,
                 RequestHeader,
-                MaybeUninit<RequestPayload>,
+                PayloadUninit<RequestPayload>,
             >::new_unchecked(header_ptr, user_header_ptr, chunk.payload.cast())
         };
 
@@ -890,7 +891,7 @@ impl<
     /// Loans/allocates a [`RequestMut`] from the underlying data segment of the [`Client`]
     /// and initializes all slice elements with the default value. This can be a performance hit
     /// and [`Client::loan_slice_uninit()`] can be used to loan a slice of
-    /// [`core::mem::MaybeUninit<Payload>`].
+    /// [`PayloadUninit<Payload>`].
     ///
     /// On failure it returns [`LoanError`] describing the failure.
     ///
@@ -998,7 +999,7 @@ impl<
     ) -> Result<
         RequestMutUninit<
             Service,
-            [MaybeUninit<RequestPayload>],
+            [PayloadUninit<RequestPayload>],
             RequestHeader,
             ResponsePayload,
             ResponseHeader,
@@ -1017,7 +1018,7 @@ impl<
     ) -> Result<
         RequestMutUninit<
             Service,
-            [MaybeUninit<RequestPayload>],
+            [PayloadUninit<RequestPayload>],
             RequestHeader,
             ResponsePayload,
             ResponseHeader,
@@ -1066,7 +1067,7 @@ impl<
             RawSampleMut::<
                 service::header::request_response::RequestHeader,
                 RequestHeader,
-                [MaybeUninit<RequestPayload>],
+                [PayloadUninit<RequestPayload>],
             >::new_unchecked(
                 header_ptr,
                 user_header_ptr,
@@ -1109,7 +1110,7 @@ impl<Service: service::Service>
     ) -> Result<
         RequestMutUninit<
             Service,
-            [MaybeUninit<CustomPayloadMarker>],
+            [PayloadUninit<CustomPayloadMarker>],
             CustomHeaderMarker,
             [CustomPayloadMarker],
             CustomHeaderMarker,

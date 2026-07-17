@@ -42,7 +42,7 @@
 //! let sample = sample.write_payload(1337);
 //! sample.send()?;
 //!
-//! // loan some uninitialized memory and send it (with direct access of [`core::mem::MaybeUninit<Payload>`])
+//! // loan some uninitialized memory and send it (with direct access of [`PayloadUninit<Payload>`])
 //! let mut sample = publisher.loan_uninit()?;
 //! sample.payload_mut().write(1337);
 //! let sample = unsafe { sample.assume_init() };
@@ -89,7 +89,7 @@
 //! let sample = sample.write_from_fn(|n| n * 123 );
 //! sample.send()?;
 //!
-//! // loan some uninitialized memory and send it (with direct access of [`core::mem::MaybeUninit<Payload>`])
+//! // loan some uninitialized memory and send it (with direct access of [`PayloadUninit<Payload>`])
 //! let mut sample = publisher.loan_slice_uninit(42)?;
 //! for element in sample.payload_mut() {
 //!     element.write(1337);
@@ -103,8 +103,8 @@
 
 use core::any::TypeId;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 use core::ptr::NonNull;
-use core::{marker::PhantomData, mem::MaybeUninit};
 
 use alloc::vec::Vec;
 
@@ -126,6 +126,7 @@ use iceoryx2_cal::zero_copy_connection::{
 };
 use iceoryx2_log::{fail, warn};
 
+use crate::payload_uninit::PayloadUninit;
 use crate::port::details::sender::*;
 use crate::port::port_name::PortName;
 use crate::port::update_connections::{ConnectionFailure, UpdateConnections};
@@ -658,7 +659,7 @@ impl<
     /// #                        .create()?;
     ///
     /// let sample = publisher.loan_uninit()?;
-    /// let sample = sample.write_payload(42); // alternatively `sample.payload_mut()` can be use to access the `MaybeUninit<Payload>`
+    /// let sample = sample.write_payload(42); // alternatively `sample.payload_mut()` can be use to access the `PayloadUninit<Payload>`
     ///
     /// sample.send()?;
     ///
@@ -667,7 +668,7 @@ impl<
     /// ```
     pub fn loan_uninit(
         &self,
-    ) -> Result<SampleMutUninit<Service, MaybeUninit<Payload>, UserHeader>, LoanError> {
+    ) -> Result<SampleMutUninit<Service, PayloadUninit<Payload>, UserHeader>, LoanError> {
         let shared_state = self.publisher_shared_state.lock();
         let chunk = shared_state
             .sender
@@ -682,7 +683,7 @@ impl<
             RawSampleMut::new_unchecked(header_ptr, user_header_ptr, chunk.payload.cast())
         };
         Ok(
-            SampleMutUninit::<Service, MaybeUninit<Payload>, UserHeader>::new(
+            SampleMutUninit::<Service, PayloadUninit<Payload>, UserHeader>::new(
                 &self.publisher_shared_state,
                 sample,
                 chunk.offset,
@@ -693,7 +694,7 @@ impl<
 
     /// Loans/allocates a [`crate::sample_mut::SampleMut`] from the underlying data segment of the [`Publisher`]
     /// and initialize it with the default value. This can be a performance hit and [`Publisher::loan_uninit`]
-    /// can be used to loan a [`core::mem::MaybeUninit<Payload>`].
+    /// can be used to loan a [`PayloadUninit<Payload>`].
     ///
     /// On failure it returns [`LoanError`] describing the failure.
     ///
@@ -741,7 +742,7 @@ impl<
     /// Loans/allocates a [`crate::sample_mut::SampleMut`] from the underlying data segment of the [`Publisher`]
     /// and initializes all slice elements with the default value. This can be a performance hit
     /// and [`Publisher::loan_slice_uninit()`] can be used to loan a slice of
-    /// [`core::mem::MaybeUninit<Payload>`].
+    /// [`PayloadUninit<Payload>`].
     ///
     /// On failure it returns [`LoanError`] describing the failure.
     ///
@@ -818,7 +819,7 @@ impl<
     ///
     /// let slice_length = 5;
     /// let sample = publisher.loan_slice_uninit(slice_length)?;
-    /// let sample = sample.write_from_fn(|n| n * 2); // alternatively `sample.payload_mut()` can be use to access the `[MaybeUninit<Payload>]`
+    /// let sample = sample.write_from_fn(|n| n * 2); // alternatively `sample.payload_mut()` can be use to access the `[PayloadUninit<Payload>]`
     ///
     /// sample.send()?;
     /// # Ok::<_, Box<dyn core::error::Error>>(())
@@ -826,7 +827,7 @@ impl<
     pub fn loan_slice_uninit(
         &self,
         slice_len: usize,
-    ) -> Result<SampleMutUninit<Service, [MaybeUninit<Payload>], UserHeader>, LoanError> {
+    ) -> Result<SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>, LoanError> {
         // required since Rust does not support generic specializations or negative traits
         debug_assert!(TypeId::of::<Payload>() != TypeId::of::<CustomPayloadMarker>());
 
@@ -837,7 +838,7 @@ impl<
         &self,
         slice_len: usize,
         underlying_number_of_slice_elements: usize,
-    ) -> Result<SampleMutUninit<Service, [MaybeUninit<Payload>], UserHeader>, LoanError> {
+    ) -> Result<SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>, LoanError> {
         let shared_state = self.publisher_shared_state.lock();
         let max_slice_len = shared_state.config.initial_max_slice_len;
         if shared_state.config.allocation_strategy == AllocationStrategy::Static
@@ -867,14 +868,16 @@ impl<
             )
         };
 
-        Ok(
-            SampleMutUninit::<Service, [MaybeUninit<Payload>], UserHeader>::new(
-                &self.publisher_shared_state,
-                sample,
-                chunk.offset,
-                chunk.size,
-            ),
-        )
+        Ok(SampleMutUninit::<
+            Service,
+            [PayloadUninit<Payload>],
+            UserHeader,
+        >::new(
+            &self.publisher_shared_state,
+            sample,
+            chunk.offset,
+            chunk.size,
+        ))
     }
 }
 
@@ -891,7 +894,7 @@ impl<Service: service::Service> Publisher<Service, [CustomPayloadMarker], Custom
         &self,
         slice_len: usize,
     ) -> Result<
-        SampleMutUninit<Service, [MaybeUninit<CustomPayloadMarker>], CustomHeaderMarker>,
+        SampleMutUninit<Service, [PayloadUninit<CustomPayloadMarker>], CustomHeaderMarker>,
         LoanError,
     > {
         let shared_state = self.publisher_shared_state.lock();

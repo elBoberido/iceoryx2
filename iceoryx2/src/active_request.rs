@@ -40,7 +40,7 @@
 //! ```
 
 use alloc::sync::Arc;
-use core::{any::TypeId, fmt::Debug, marker::PhantomData, mem::MaybeUninit, ops::Deref};
+use core::{any::TypeId, fmt::Debug, marker::PhantomData, ops::Deref};
 use iceoryx2_bb_elementary_traits::testing::abandonable::Abandonable;
 use iceoryx2_cal::zero_copy_connection::ChannelState;
 
@@ -58,6 +58,7 @@ use crate::service::marker::CustomHeaderMarker;
 use crate::service::marker::CustomPayloadMarker;
 use crate::{
     identifiers::{UniqueClientId, UniqueServerId},
+    payload_uninit::PayloadUninit,
     port::{
         LoanError, SendError,
         details::chunk_details::ChunkDetails,
@@ -319,7 +320,7 @@ impl<
     /// ```
     pub fn loan_uninit(
         &self,
-    ) -> Result<ResponseMutUninit<Service, MaybeUninit<ResponsePayload>, ResponseHeader>, LoanError>
+    ) -> Result<ResponseMutUninit<Service, PayloadUninit<ResponsePayload>, ResponseHeader>, LoanError>
     {
         self.increment_loan_counter()?;
         let shared_state = self.shared_state.lock();
@@ -347,7 +348,7 @@ impl<
             RawSampleMut::<
                 service::header::request_response::ResponseHeader,
                 ResponseHeader,
-                MaybeUninit<ResponsePayload>,
+                PayloadUninit<ResponsePayload>,
             >::new_unchecked(header_ptr, user_header_ptr, chunk.payload.cast())
         };
 
@@ -463,7 +464,7 @@ impl<
     /// [`Server`](crate::port::server::Server)
     /// and initializes all slice elements with the default value. This can be a performance hit
     /// and [`ActiveRequest::loan_slice_uninit()`] can be used to loan a slice of
-    /// [`core::mem::MaybeUninit<Payload>`].
+    /// [`PayloadUninit<Payload>`].
     ///
     /// On failure it returns [`LoanError`] describing the failure.
     ///
@@ -547,8 +548,10 @@ impl<
     pub fn loan_slice_uninit(
         &self,
         slice_len: usize,
-    ) -> Result<ResponseMutUninit<Service, [MaybeUninit<ResponsePayload>], ResponseHeader>, LoanError>
-    {
+    ) -> Result<
+        ResponseMutUninit<Service, [PayloadUninit<ResponsePayload>], ResponseHeader>,
+        LoanError,
+    > {
         debug_assert!(TypeId::of::<ResponsePayload>() != TypeId::of::<CustomPayloadMarker>());
         unsafe { self.loan_slice_uninit_impl(slice_len, slice_len) }
     }
@@ -557,8 +560,10 @@ impl<
         &self,
         slice_len: usize,
         underlying_number_of_slice_elements: usize,
-    ) -> Result<ResponseMutUninit<Service, [MaybeUninit<ResponsePayload>], ResponseHeader>, LoanError>
-    {
+    ) -> Result<
+        ResponseMutUninit<Service, [PayloadUninit<ResponsePayload>], ResponseHeader>,
+        LoanError,
+    > {
         let shared_state = self.shared_state.lock();
         let max_slice_len = shared_state.config.initial_max_slice_len;
 
@@ -594,7 +599,7 @@ impl<
             RawSampleMut::<
                 service::header::request_response::ResponseHeader,
                 ResponseHeader,
-                [MaybeUninit<ResponsePayload>],
+                [PayloadUninit<ResponsePayload>],
             >::new_unchecked(
                 header_ptr,
                 user_header_ptr,
@@ -635,7 +640,7 @@ impl<Service: crate::service::Service>
         &self,
         slice_len: usize,
     ) -> Result<
-        ResponseMutUninit<Service, [MaybeUninit<CustomPayloadMarker>], CustomHeaderMarker>,
+        ResponseMutUninit<Service, [PayloadUninit<CustomPayloadMarker>], CustomHeaderMarker>,
         LoanError,
     > {
         let shared_state = self.shared_state.lock();

@@ -13,6 +13,7 @@
 use core::mem::MaybeUninit;
 
 use clap::Parser;
+use iceoryx2::payload_uninit::PayloadUninit;
 use iceoryx2::prelude::*;
 use iceoryx2_bb_posix::barrier::*;
 use iceoryx2_bb_posix::clock::Time;
@@ -83,7 +84,9 @@ fn perform_benchmark<T: Service>(args: &Args) -> Result<(), Box<dyn core::error:
 
             let mut sample = if args.send_copy {
                 let mut sample = sender_a2b.loan_slice_uninit(args.payload_size).unwrap();
-                sample.payload_mut().fill(MaybeUninit::new(0));
+                sample
+                    .payload_mut()
+                    .fill(PayloadUninit::new(MaybeUninit::new(0)));
                 unsafe { sample.assume_init() }
             } else {
                 unsafe {
@@ -123,7 +126,9 @@ fn perform_benchmark<T: Service>(args: &Args) -> Result<(), Box<dyn core::error:
             for _ in 0..args.iterations {
                 let sample = if args.send_copy {
                     let mut sample = sender_b2a.loan_slice_uninit(args.payload_size).unwrap();
-                    sample.payload_mut().fill(MaybeUninit::new(0));
+                    sample
+                        .payload_mut()
+                        .fill(PayloadUninit::new(MaybeUninit::new(0)));
                     unsafe { sample.assume_init() }
                 } else {
                     unsafe {

@@ -10,8 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use core::mem::MaybeUninit;
-
+use iceoryx2::payload_uninit::PayloadUninit;
 use iceoryx2::service::marker::{CustomHeaderMarker, CustomPayloadMarker};
 use iceoryx2_log::fatal_panic;
 use pyo3::prelude::*;
@@ -28,7 +27,7 @@ pub(crate) enum SampleMutUninitType {
         Option<
             iceoryx2::sample_mut_uninit::SampleMutUninit<
                 crate::IpcService,
-                [MaybeUninit<CustomPayloadMarker>],
+                [PayloadUninit<CustomPayloadMarker>],
                 CustomHeaderMarker,
             >,
         >,
@@ -37,7 +36,7 @@ pub(crate) enum SampleMutUninitType {
         Option<
             iceoryx2::sample_mut_uninit::SampleMutUninit<
                 crate::LocalService,
-                [MaybeUninit<CustomPayloadMarker>],
+                [PayloadUninit<CustomPayloadMarker>],
                 CustomHeaderMarker,
             >,
         >,

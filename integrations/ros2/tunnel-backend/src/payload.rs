@@ -13,11 +13,11 @@
 //! Reinterpretation between iceoryx2's untyped sample markers and raw
 //! bytes.
 
-use core::mem::MaybeUninit;
-
 use iceoryx2::service::Service;
 use iceoryx2::service::marker::{CustomHeaderMarker, CustomPayloadMarker};
-use iceoryx2_services_tunnel_backend::types::publish_subscribe::{SampleMut, SampleMutUninit};
+use iceoryx2_services_tunnel_backend::types::publish_subscribe::{
+    PayloadUninit, SampleMut, SampleMutUninit,
+};
 
 // The byte views rely on the marker being exactly one byte.
 const _: () = assert!(core::mem::size_of::<CustomPayloadMarker>() == 1);
@@ -36,7 +36,7 @@ pub fn as_bytes(payload: &[CustomPayloadMarker]) -> &[u8] {
 
 /// A raw byte pointer to an uninitialized untyped payload, as the
 /// destination for an external writer.
-pub fn uninit_bytes_ptr(payload: &mut [MaybeUninit<CustomPayloadMarker>]) -> *mut u8 {
+pub fn uninit_bytes_ptr(payload: &mut [PayloadUninit<CustomPayloadMarker>]) -> *mut u8 {
     payload.as_mut_ptr().cast()
 }
 

@@ -43,8 +43,11 @@
 
 use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
 
-use crate::{port::server::SharedServerState, response_mut::ResponseMut, service};
-use core::{fmt::Debug, mem::MaybeUninit};
+use crate::{
+    payload_uninit::PayloadUninit, port::server::SharedServerState, response_mut::ResponseMut,
+    service,
+};
+use core::fmt::Debug;
 
 /// Acquired by a [`ActiveRequest`](crate::active_request::ActiveRequest) with
 ///  * [`ActiveRequest::loan_uninit()`](crate::active_request::ActiveRequest::loan_uninit())
@@ -56,7 +59,7 @@ use core::{fmt::Debug, mem::MaybeUninit};
 /// If the [`ResponseMutUninit`] is not sent it will reelase the loaned memory when going out of
 /// scope.
 ///
-/// The generic parameter `Payload` is actually [`core::mem::MaybeUninit<Payload>`].
+/// The generic parameter `Payload` is actually [`PayloadUninit<Payload>`].
 pub struct ResponseMutUninit<
     Service: service::Service,
     ResponsePayload: Debug + ZeroCopySend + ?Sized,
@@ -234,7 +237,7 @@ impl<
     Service: crate::service::Service,
     ResponsePayload: Debug + ZeroCopySend,
     ResponseHeader: Debug + ZeroCopySend,
-> ResponseMutUninit<Service, MaybeUninit<ResponsePayload>, ResponseHeader>
+> ResponseMutUninit<Service, PayloadUninit<ResponsePayload>, ResponseHeader>
 {
     /// Writes the provided payload into the [`ResponseMutUninit`] and returns an initialized
     /// [`ResponseMut`] that is ready to be sent.
@@ -298,7 +301,7 @@ impl<
     /// # }
     /// ```
     pub unsafe fn assume_init(self) -> ResponseMut<Service, ResponsePayload, ResponseHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_response = unsafe { core::mem::transmute_copy(&self.response) };
         core::mem::forget(self);
         initialized_response
@@ -309,7 +312,7 @@ impl<
     Service: crate::service::Service,
     ResponsePayload: Debug + ZeroCopySend,
     ResponseHeader: Debug + ZeroCopySend,
-> ResponseMutUninit<Service, [MaybeUninit<ResponsePayload>], ResponseHeader>
+> ResponseMutUninit<Service, [PayloadUninit<ResponsePayload>], ResponseHeader>
 {
     /// Converts the [`ResponseMutUninit`] into [`ResponseMut`]. This shall be done after the
     /// payload was written into the [`ResponseMutUninit`].
@@ -346,7 +349,7 @@ impl<
     /// # }
     /// ```
     pub unsafe fn assume_init(self) -> ResponseMut<Service, [ResponsePayload], ResponseHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_response = unsafe { core::mem::transmute_copy(&self.response) };
         core::mem::forget(self);
         initialized_response
@@ -396,7 +399,7 @@ impl<
     Service: crate::service::Service,
     ResponsePayload: Debug + Copy + ZeroCopySend,
     ResponseHeader: Debug + ZeroCopySend,
-> ResponseMutUninit<Service, [MaybeUninit<ResponsePayload>], ResponseHeader>
+> ResponseMutUninit<Service, [PayloadUninit<ResponsePayload>], ResponseHeader>
 {
     /// Writes the payload by mem copying the provided slice into the [`ResponseMutUninit`].
     ///
@@ -429,7 +432,7 @@ impl<
         value: &[ResponsePayload],
     ) -> ResponseMut<Service, [ResponsePayload], ResponseHeader> {
         self.payload_mut().copy_from_slice(unsafe {
-            core::mem::transmute::<&[ResponsePayload], &[MaybeUninit<ResponsePayload>]>(value)
+            core::mem::transmute::<&[ResponsePayload], &[PayloadUninit<ResponsePayload>]>(value)
         });
         unsafe { self.assume_init() }
     }

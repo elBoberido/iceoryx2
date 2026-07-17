@@ -19,6 +19,7 @@ use crate::{
     iox2_service_builder_request_response_set_response_header_type_details, iox2_type_variant_e,
 };
 
+use iceoryx2::payload_uninit::PayloadUninit;
 use iceoryx2::prelude::*;
 use iceoryx2::service::builder::{
     Builder as ServiceBuilderBase, blackboard::Creator as ServiceBuilderBlackboardCreator,
@@ -31,13 +32,12 @@ use iceoryx2_bb_elementary::static_assert::*;
 use iceoryx2_ffi_macros::iceoryx2_ffi;
 
 use core::mem::ManuallyDrop;
-use core::mem::MaybeUninit;
 
 // BEGIN types definition
 
 pub(super) type UserHeaderFfi = CustomHeaderMarker;
 pub(super) type PayloadFfi = [CustomPayloadMarker];
-pub(super) type UninitPayloadFfi = [MaybeUninit<CustomPayloadMarker>];
+pub(super) type UninitPayloadFfi = [PayloadUninit<CustomPayloadMarker>];
 pub(super) type KeyFfi = CustomKeyMarker;
 
 pub(super) union ServiceBuilderUnionNested<S: Service> {

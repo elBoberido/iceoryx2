@@ -39,8 +39,11 @@
 
 use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
 
-use crate::{port::client::ClientSharedState, request_mut::RequestMut, service};
-use core::{fmt::Debug, mem::MaybeUninit};
+use crate::{
+    payload_uninit::PayloadUninit, port::client::ClientSharedState, request_mut::RequestMut,
+    service,
+};
+use core::fmt::Debug;
 
 /// A version of the [`RequestMut`] where the payload is not initialized which allows
 /// true zero copy usage. To send a [`RequestMutUninit`] it must be first initialized
@@ -127,7 +130,7 @@ impl<
 >
     RequestMutUninit<
         Service,
-        MaybeUninit<RequestPayload>,
+        PayloadUninit<RequestPayload>,
         RequestHeader,
         ResponsePayload,
         ResponseHeader,
@@ -163,7 +166,7 @@ impl<
     /// # let client = service.client_builder().create()?;
     ///
     /// let mut request = client.loan_uninit()?;
-    /// // use the MaybeUninit API to initialize the payload
+    /// // use the PayloadUninit API to initialize the payload
     /// request.payload_mut().write(8283);
     /// // we have written the payload, initialize the request
     /// let request = unsafe { request.assume_init() };
@@ -175,12 +178,12 @@ impl<
     /// ```
     /// # Safety
     ///
-    /// The caller must ensure that [`core::mem::MaybeUninit<Payload>`] really is initialized.
+    /// The caller must ensure that [`PayloadUninit<Payload>`] really is initialized.
     /// Sending the content when it is not fully initialized causes immediate undefined behavior.
     pub unsafe fn assume_init(
         self,
     ) -> RequestMut<Service, RequestPayload, RequestHeader, ResponsePayload, ResponseHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_request = unsafe { core::mem::transmute_copy(&self.request) };
         core::mem::forget(self);
         initialized_request
@@ -196,7 +199,7 @@ impl<
 >
     RequestMutUninit<
         Service,
-        [MaybeUninit<RequestPayload>],
+        [PayloadUninit<RequestPayload>],
         RequestHeader,
         ResponsePayload,
         ResponseHeader,
@@ -238,12 +241,12 @@ impl<
     /// ```
     /// # Safety
     ///
-    /// The caller must ensure that [`core::mem::MaybeUninit<Payload>`] really is initialized.
+    /// The caller must ensure that [`PayloadUninit<Payload>`] really is initialized.
     /// Sending the content when it is not fully initialized causes immediate undefined behavior.
     pub unsafe fn assume_init(
         self,
     ) -> RequestMut<Service, [RequestPayload], RequestHeader, ResponsePayload, ResponseHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_request = unsafe { core::mem::transmute_copy(&self.request) };
         core::mem::forget(self);
         initialized_request
@@ -300,7 +303,7 @@ impl<
 >
     RequestMutUninit<
         Service,
-        [MaybeUninit<RequestPayload>],
+        [PayloadUninit<RequestPayload>],
         RequestHeader,
         ResponsePayload,
         ResponseHeader,
@@ -339,7 +342,7 @@ impl<
         value: &[RequestPayload],
     ) -> RequestMut<Service, [RequestPayload], RequestHeader, ResponsePayload, ResponseHeader> {
         self.payload_mut().copy_from_slice(unsafe {
-            core::mem::transmute::<&[RequestPayload], &[MaybeUninit<RequestPayload>]>(value)
+            core::mem::transmute::<&[RequestPayload], &[PayloadUninit<RequestPayload>]>(value)
         });
         unsafe { self.assume_init() }
     }

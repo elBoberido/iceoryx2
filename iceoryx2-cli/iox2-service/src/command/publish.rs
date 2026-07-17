@@ -12,7 +12,7 @@
 
 use crate::cli::{CliTypeVariant, DataRepresentation, PublishOptions};
 use anyhow::Result;
-use core::mem::MaybeUninit;
+use iceoryx2::payload_uninit::PayloadUninit;
 use iceoryx2::port::publisher::Publisher;
 use iceoryx2::prelude::*;
 use iceoryx2::sample_mut_uninit::SampleMutUninit;
@@ -27,7 +27,8 @@ fn loan(
     len: usize,
     publisher: &Publisher<ipc::Service, [CustomPayloadMarker], CustomHeaderMarker>,
     options: &PublishOptions,
-) -> Result<SampleMutUninit<ipc::Service, [MaybeUninit<CustomPayloadMarker>], CustomHeaderMarker>> {
+) -> Result<SampleMutUninit<ipc::Service, [PayloadUninit<CustomPayloadMarker>], CustomHeaderMarker>>
+{
     match options.type_variant {
         CliTypeVariant::Dynamic => unsafe {
             publisher

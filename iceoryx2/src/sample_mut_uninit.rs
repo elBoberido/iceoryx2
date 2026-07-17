@@ -90,13 +90,14 @@
 //! # }
 //! ```
 
-use core::{fmt::Debug, mem::MaybeUninit};
+use core::fmt::Debug;
 
 use flatbuffers::FlatBufferBuilder;
 use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
 use iceoryx2_cal::shm_allocator::PointerOffset;
 
 use crate::{
+    payload_uninit::PayloadUninit,
     port::publisher::PublisherSharedState,
     raw_sample::RawSampleMut,
     sample_mut::SampleMut,
@@ -127,7 +128,7 @@ where
 }
 
 impl<Service: crate::service::Service, Payload, UserHeader: ZeroCopySend>
-    SampleMutUninit<Service, MaybeUninit<Flatbuffer<Payload>>, UserHeader>
+    SampleMutUninit<Service, PayloadUninit<Flatbuffer<Payload>>, UserHeader>
 {
     /// Returns the internal [`FlatBufferBuilder`] that was constructed with the internal iceoryx2
     /// allocator to enable true zero-copy data transfer.
@@ -224,7 +225,7 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
     ///
     /// # Notes
     ///
-    /// The generic parameter `Payload` is packed into a [`core::mem::MaybeUninit<Payload>`].
+    /// The generic parameter `Payload` is packed into a [`PayloadUninit<Payload>`].
     ///
     /// # Example
     ///
@@ -241,7 +242,8 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
     ///
     /// let mut sample = publisher.loan_uninit()?;
     /// sample.payload_mut().write(123);
-    /// println!("Sample current payload {}", unsafe { sample.payload().assume_init_ref() });
+    /// let sample = unsafe { sample.assume_init() };
+    /// println!("Sample current payload {}",  *sample);
     ///
     /// # Ok(())
     /// # }
@@ -257,7 +259,7 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
     ///
     /// # Notes
     ///
-    /// The generic parameter `Payload` is packed into a [`core::mem::MaybeUninit<Payload>`].
+    /// The generic parameter `Payload` is packed into a [`PayloadUninit<Payload>`].
     ///
     /// # Example
     ///
@@ -287,11 +289,11 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
 }
 
 impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
-    SampleMutUninit<Service, MaybeUninit<Payload>, UserHeader>
+    SampleMutUninit<Service, PayloadUninit<Payload>, UserHeader>
 {
     pub(crate) fn new(
         publisher_shared_state: &Service::ArcThreadSafetyPolicy<PublisherSharedState<Service>>,
-        ptr: RawSampleMut<Header, UserHeader, MaybeUninit<Payload>>,
+        ptr: RawSampleMut<Header, UserHeader, PayloadUninit<Payload>>,
         offset_to_chunk: PointerOffset,
         sample_size: usize,
     ) -> Self {
@@ -333,15 +335,15 @@ impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
     where
         Payload: ZeroCopySend,
     {
-        self.payload_mut().write(value);
+        self.payload_mut().inner.write(value);
         unsafe { self.assume_init() }
     }
 
-    /// Extracts the value of the [`core::mem::MaybeUninit<Payload>`] container and labels the sample as initialized
+    /// Extracts the value of the [`PayloadUninit<Payload>`] container and labels the sample as initialized
     ///
     /// # Safety
     ///
-    /// The caller must ensure that [`core::mem::MaybeUninit<Payload>`] really is initialized. Calling this when
+    /// The caller must ensure that [`PayloadUninit<Payload>`] really is initialized. Calling this when
     /// the content is not fully initialized causes immediate undefined behavior.
     ///
     /// # Example
@@ -367,7 +369,7 @@ impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
     /// # }
     /// ```
     pub unsafe fn assume_init(self) -> SampleMut<Service, Payload, UserHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_sample = unsafe { core::mem::transmute_copy(&self.sample) };
         core::mem::forget(self);
         initialized_sample
@@ -375,11 +377,11 @@ impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
 }
 
 impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader: ZeroCopySend>
-    SampleMutUninit<Service, [MaybeUninit<Payload>], UserHeader>
+    SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>
 {
     pub(crate) fn new(
         publisher_shared_state: &Service::ArcThreadSafetyPolicy<PublisherSharedState<Service>>,
-        ptr: RawSampleMut<Header, UserHeader, [MaybeUninit<Payload>]>,
+        ptr: RawSampleMut<Header, UserHeader, [PayloadUninit<Payload>]>,
         offset_to_chunk: PointerOffset,
         sample_size: usize,
     ) -> Self {
@@ -394,18 +396,17 @@ impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader
         }
     }
 
-    /// Extracts the value of the slice of [`core::mem::MaybeUninit<Payload>`] and labels the sample as initialized
+    /// Extracts the value of the slice of [`PayloadUninit<Payload>`] and labels the sample as initialized
     ///
     /// # Safety
     ///
-    /// The caller must ensure that every element of the slice of [`core::mem::MaybeUninit<Payload>`]
+    /// The caller must ensure that every element of the slice of [`PayloadUninit<Payload>`]
     /// is initialized. Calling this when the content is not fully initialized causes immediate undefined behavior.
     ///
     /// # Example
     ///
     /// ```
     /// use iceoryx2::prelude::*;
-    /// use core::mem::MaybeUninit;
     ///
     /// # fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// # let node = NodeBuilder::new().create::<ipc::Service>()?;
@@ -431,7 +432,7 @@ impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader
     /// # }
     /// ```
     pub unsafe fn assume_init(self) -> SampleMut<Service, [Payload], UserHeader> {
-        // the transmute is not nice but safe since MaybeUninit is #[repr(transparent)] to the inner type
+        // the transmute is not nice but safe since PayloadUninit is #[repr(transparent)] to the inner type
         let initialized_sample = unsafe { core::mem::transmute_copy(&self.sample) };
         core::mem::forget(self);
         initialized_sample
@@ -466,7 +467,7 @@ impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader
         mut initializer: F,
     ) -> SampleMut<Service, [Payload], UserHeader> {
         for (i, element) in self.payload_mut().iter_mut().enumerate() {
-            element.write(initializer(i));
+            element.inner.write(initializer(i));
         }
 
         // SAFETY: this is safe since the payload was initialized on the line above
@@ -478,7 +479,7 @@ impl<
     Service: crate::service::Service,
     Payload: Debug + Copy + ZeroCopySend,
     UserHeader: ZeroCopySend,
-> SampleMutUninit<Service, [MaybeUninit<Payload>], UserHeader>
+> SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>
 {
     /// Writes the payload by mem copying the provided slice into the [`SampleMutUninit`].
     ///
@@ -509,7 +510,7 @@ impl<
         value: &[Payload],
     ) -> SampleMut<Service, [Payload], UserHeader> {
         self.payload_mut().copy_from_slice(unsafe {
-            core::mem::transmute::<&[Payload], &[MaybeUninit<Payload>]>(value)
+            core::mem::transmute::<&[Payload], &[PayloadUninit<Payload>]>(value)
         });
         unsafe { self.assume_init() }
     }
