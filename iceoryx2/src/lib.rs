@@ -530,6 +530,9 @@ pub mod active_request;
 /// Defines unique ids for every entity in iceoryx2.
 pub mod identifiers;
 
+/// A thin wrapper around a `MaybeUninit`
+pub mod payload_uninit;
+
 /// Represents a "connection" to a [`Server`](crate::port::server::Server) that corresponds to a
 /// previously sent [`RequestMut`](crate::request_mut::RequestMut).
 pub mod pending_response;
