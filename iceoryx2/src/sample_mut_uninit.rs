@@ -93,7 +93,7 @@
 use core::fmt::Debug;
 
 use flatbuffers::FlatBufferBuilder;
-use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
+use iceoryx2_bb_elementary_traits::{iceoryx_send::IceoryxSend, zero_copy_send::ZeroCopySend};
 use iceoryx2_cal::shm_allocator::PointerOffset;
 
 use crate::{
@@ -113,15 +113,18 @@ use crate::{
 /// it will release the loaned memory when going out of scope.
 pub struct SampleMutUninit<
     Service: crate::service::Service,
-    Payload: Debug + ?Sized,
+    Payload: IceoryxSend + Debug + ?Sized,
     UserHeader: ZeroCopySend,
 > {
     sample: SampleMut<Service, Payload, UserHeader>,
     flatbuffer_builder: Option<FlatBufferBuilder<'static>>,
 }
 
-unsafe impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: ZeroCopySend>
-    Send for SampleMutUninit<Service, Payload, UserHeader>
+unsafe impl<
+    Service: crate::service::Service,
+    Payload: IceoryxSend + Debug + ?Sized,
+    UserHeader: ZeroCopySend,
+> Send for SampleMutUninit<Service, Payload, UserHeader>
 where
     Service::ArcThreadSafetyPolicy<PublisherSharedState<Service>>: Send + Sync,
 {
@@ -141,8 +144,11 @@ impl<Service: crate::service::Service, Payload, UserHeader: ZeroCopySend>
     }
 }
 
-impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: ZeroCopySend>
-    SampleMutUninit<Service, Payload, UserHeader>
+impl<
+    Service: crate::service::Service,
+    Payload: IceoryxSend + Debug + ?Sized,
+    UserHeader: ZeroCopySend,
+> SampleMutUninit<Service, Payload, UserHeader>
 {
     /// Returns a reference to the [`Header`] of the [`SampleMutUninit`].
     ///
@@ -248,10 +254,7 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
     /// # Ok(())
     /// # }
     /// ```
-    pub fn payload(&self) -> &Payload
-    where
-        Payload: ZeroCopySend,
-    {
+    pub fn payload(&self) -> &Payload {
         self.sample.payload()
     }
 
@@ -280,16 +283,15 @@ impl<Service: crate::service::Service, Payload: Debug + ?Sized, UserHeader: Zero
     /// # Ok(())
     /// # }
     /// ```
-    pub fn payload_mut(&mut self) -> &mut Payload
-    where
-        Payload: ZeroCopySend,
-    {
+    pub fn payload_mut(&mut self) -> &mut Payload {
         self.sample.payload_mut()
     }
 }
 
-impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
+impl<Service: crate::service::Service, Payload: Debug + IceoryxSend, UserHeader: ZeroCopySend>
     SampleMutUninit<Service, PayloadUninit<Payload>, UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     pub(crate) fn new(
         publisher_shared_state: &Service::ArcThreadSafetyPolicy<PublisherSharedState<Service>>,
@@ -331,10 +333,7 @@ impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
     /// # Ok(())
     /// # }
     /// ```
-    pub fn write_payload(mut self, value: Payload) -> SampleMut<Service, Payload, UserHeader>
-    where
-        Payload: ZeroCopySend,
-    {
+    pub fn write_payload(mut self, value: Payload) -> SampleMut<Service, Payload, UserHeader> {
         self.payload_mut().inner.write(value);
         unsafe { self.assume_init() }
     }
@@ -376,8 +375,10 @@ impl<Service: crate::service::Service, Payload: Debug, UserHeader: ZeroCopySend>
     }
 }
 
-impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader: ZeroCopySend>
+impl<Service: crate::service::Service, Payload: Debug + IceoryxSend, UserHeader: ZeroCopySend>
     SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     pub(crate) fn new(
         publisher_shared_state: &Service::ArcThreadSafetyPolicy<PublisherSharedState<Service>>,
@@ -477,9 +478,11 @@ impl<Service: crate::service::Service, Payload: Debug + ZeroCopySend, UserHeader
 
 impl<
     Service: crate::service::Service,
-    Payload: Debug + Copy + ZeroCopySend,
+    Payload: Debug + Copy + IceoryxSend,
     UserHeader: ZeroCopySend,
 > SampleMutUninit<Service, [PayloadUninit<Payload>], UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     /// Writes the payload by mem copying the provided slice into the [`SampleMutUninit`].
     ///

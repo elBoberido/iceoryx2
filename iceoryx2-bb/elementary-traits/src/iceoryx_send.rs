@@ -10,8 +10,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::type_name::TypeName;
-
 #[doc(hidden)]
 /// Trait to prevent the IceoryxSend trait from being implemented outside the crate.
 ///
@@ -23,7 +21,7 @@ pub unsafe trait __InternalNoTouchyFishy {}
 
 /// Marker trait that identifies types that can be transmitted via iceoryx2.
 #[allow(private_bounds)]
-pub trait IceoryxSend: __InternalNoTouchyFishy + TypeName {}
+pub trait IceoryxSend: __InternalNoTouchyFishy {}
 
 /// ``` compile_fail
 /// use iceoryx2_bb_elementary_traits::iceoryx_send::IceoryxSend;
@@ -33,3 +31,6 @@ pub trait IceoryxSend: __InternalNoTouchyFishy + TypeName {}
 /// ```
 #[cfg(doctest)]
 fn iceoryx_send_cannot_be_implemented() {}
+
+unsafe impl<T: __InternalNoTouchyFishy> __InternalNoTouchyFishy for [T] {}
+impl<T: IceoryxSend> IceoryxSend for [T] {}

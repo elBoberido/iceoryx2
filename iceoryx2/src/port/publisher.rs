@@ -605,6 +605,8 @@ impl<
     Payload: IceoryxSend + Debug + Sized,
     UserHeader: Default + Debug + ZeroCopySend,
 > Publisher<Service, Payload, UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     /// Copies the input `value` into a [`crate::sample_mut::SampleMut`] and delivers it.
     /// On success it returns the number of [`crate::port::subscriber::Subscriber`]s that received
@@ -628,10 +630,7 @@ impl<
     /// # Ok(())
     /// # }
     /// ```
-    pub fn send_copy(&self, value: Payload) -> Result<usize, SendError>
-    where
-        Payload: ZeroCopySend,
-    {
+    pub fn send_copy(&self, value: Payload) -> Result<usize, SendError> {
         let msg = "Unable to send copy of payload";
         let sample = fail!(from self, when self.loan_uninit(),
                                     "{} since the loan of a sample failed.", msg);
@@ -721,7 +720,7 @@ impl<
     /// ```
     pub fn loan(&self) -> Result<SampleMut<Service, Payload, UserHeader>, LoanError>
     where
-        Payload: ZeroCopySend + Default,
+        Payload: Default,
     {
         Ok(self.loan_uninit()?.write_payload(Payload::default()))
     }
@@ -735,9 +734,11 @@ impl<
 ////////////////////////
 impl<
     Service: service::Service,
-    Payload: Default + Debug + ZeroCopySend,
+    Payload: Default + Debug + IceoryxSend,
     UserHeader: Default + Debug + ZeroCopySend,
 > Publisher<Service, [Payload], UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     /// Loans/allocates a [`crate::sample_mut::SampleMut`] from the underlying data segment of the [`Publisher`]
     /// and initializes all slice elements with the default value. This can be a performance hit
@@ -779,7 +780,7 @@ impl<
     }
 }
 
-impl<Service: service::Service, Payload: Debug + ZeroCopySend, UserHeader: Debug + ZeroCopySend>
+impl<Service: service::Service, Payload: Debug + IceoryxSend, UserHeader: Debug + ZeroCopySend>
     Publisher<Service, [Payload], UserHeader>
 {
     /// Returns the maximum initial slice length configured for this [`Publisher`].
@@ -793,9 +794,11 @@ impl<Service: service::Service, Payload: Debug + ZeroCopySend, UserHeader: Debug
 
 impl<
     Service: service::Service,
-    Payload: Debug + ZeroCopySend,
+    Payload: Debug + IceoryxSend,
     UserHeader: Default + Debug + ZeroCopySend,
 > Publisher<Service, [Payload], UserHeader>
+where
+    PayloadUninit<Payload>: IceoryxSend,
 {
     /// Loans/allocates a [`SampleMutUninit`] from the underlying data segment of the [`Publisher`].
     /// The user has to initialize the payload before it can be sent.

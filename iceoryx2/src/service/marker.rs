@@ -10,6 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::payload_uninit::PayloadUninit;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use iceoryx2_bb_derive_macros::ZeroCopySend;
@@ -47,6 +48,9 @@ impl<T> Debug for Flatbuffer<T> {
 
 unsafe impl<T> __InternalNoTouchyFishy for Flatbuffer<T> {}
 impl<T> IceoryxSend for Flatbuffer<T> {}
+
+unsafe impl<T> __InternalNoTouchyFishy for PayloadUninit<Flatbuffer<T>> {}
+impl<T> IceoryxSend for PayloadUninit<Flatbuffer<T>> {}
 
 unsafe impl<T> TypeName for Flatbuffer<T> {
     unsafe fn type_name() -> &'static str {

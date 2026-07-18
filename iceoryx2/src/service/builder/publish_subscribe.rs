@@ -19,8 +19,9 @@ use core::marker::PhantomData;
 use alloc::format;
 
 use iceoryx2_bb_elementary::alignment::Alignment;
+use iceoryx2_bb_elementary_traits::type_name::TypeName;
 use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
-use iceoryx2_bb_flatbuffers::TypeName;
+use iceoryx2_bb_flatbuffers::TypeName as FlatbufferTypeName;
 use iceoryx2_log::{fail, fatal_panic, warn};
 
 use super::ServiceState;
@@ -415,12 +416,11 @@ impl<
     ServiceType: service::Service,
 > Builder<Payload, UserHeader, ServiceType>
 {
-    fn has_flatbuffer_payload() -> bool {
-        use iceoryx2_bb_elementary_traits::type_name::TypeName;
-        unsafe {
-            <Payload as iceoryx2_bb_elementary_traits::type_name::TypeName>::type_name()
-                == Flatbuffer::<()>::type_name()
-        }
+    fn has_flatbuffer_payload() -> bool
+    where
+        Payload: TypeName,
+    {
+        unsafe { <Payload as TypeName>::type_name() == Flatbuffer::<()>::type_name() }
     }
 
     pub(crate) fn new(base: builder::BuilderWithServiceType<ServiceType>) -> Self {
@@ -685,7 +685,10 @@ impl<
     ) -> Result<
         publish_subscribe::PortFactory<ServiceType, Payload, UserHeader>,
         PublishSubscribeCreateError,
-    > {
+    >
+    where
+        Payload: TypeName,
+    {
         let msg = "Unable to create publish subscribe service";
         if !self.config_details().enable_safe_overflow
             && (self.config_details().subscriber_max_buffer_size
@@ -726,7 +729,7 @@ impl<
                         use_type_definition: Self::has_flatbuffer_payload(),
                         schema_path: self.flatbuffer_schema_path,
                         shared_node: self.base.shared_node.clone(),
-                        type_name: TypeName::new::<Payload>(),
+                        type_name: FlatbufferTypeName::new::<Payload>(),
                     },
                 )
             },
@@ -742,7 +745,10 @@ impl<
     ) -> Result<
         publish_subscribe::PortFactory<ServiceType, Payload, UserHeader>,
         PublishSubscribeOpenError,
-    > {
+    >
+    where
+        Payload: TypeName,
+    {
         let msg = "Unable to open publish subscribe service";
 
         let service_state = self.base.open(
@@ -758,7 +764,7 @@ impl<
                         use_type_definition: Self::has_flatbuffer_payload(),
                         schema_path: self.flatbuffer_schema_path,
                         shared_node: self.base.shared_node.clone(),
-                        type_name: TypeName::new::<Payload>(),
+                        type_name: FlatbufferTypeName::new::<Payload>(),
                     },
                 )
             },
@@ -773,7 +779,10 @@ impl<
     ) -> Result<
         publish_subscribe::PortFactory<ServiceType, Payload, UserHeader>,
         PublishSubscribeOpenOrCreateError,
-    > {
+    >
+    where
+        Payload: TypeName,
+    {
         let msg = "Unable to open or create publish subscribe service";
         self.base.open_or_create(
             msg,
@@ -812,7 +821,7 @@ impl<UserHeader: Debug + ZeroCopySend, ServiceType: service::Service>
     }
 }
 
-impl<Payload: Debug + ?Sized + IceoryxSend + ZeroCopySend, ServiceType: service::Service>
+impl<Payload: Debug + ?Sized + IceoryxSend, ServiceType: service::Service>
     Builder<Payload, CustomHeaderMarker, ServiceType>
 {
     #[doc(hidden)]
@@ -824,6 +833,8 @@ impl<Payload: Debug + ?Sized + IceoryxSend + ZeroCopySend, ServiceType: service:
 
 impl<Payload: IceoryxSend + Debug, UserHeader: Debug + ZeroCopySend, ServiceType: service::Service>
     Builder<Payload, UserHeader, ServiceType>
+where
+    Payload: TypeName,
 {
     fn prepare_config_details(&mut self) {
         self.config_details_mut().message_type_details =
@@ -928,11 +939,8 @@ impl<Payload: Debug + IceoryxSend, UserHeader: Debug + ZeroCopySend, ServiceType
     }
 }
 
-impl<
-    Payload: Debug + IceoryxSend + ZeroCopySend,
-    UserHeader: Debug + ZeroCopySend,
-    ServiceType: service::Service,
-> Builder<[Payload], UserHeader, ServiceType>
+impl<Payload: Debug + ZeroCopySend, UserHeader: Debug + ZeroCopySend, ServiceType: service::Service>
+    Builder<[Payload], UserHeader, ServiceType>
 {
     fn prepare_config_details(&mut self) {
         self.config_details_mut().message_type_details =
