@@ -10,6 +10,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::zero_copy_send::ZeroCopySend;
+
 #[doc(hidden)]
 /// Trait to prevent the IceoryxSend trait from being implemented outside the crate.
 ///
@@ -34,3 +36,6 @@ fn iceoryx_send_cannot_be_implemented() {}
 
 unsafe impl<T: __InternalNoTouchyFishy> __InternalNoTouchyFishy for [T] {}
 impl<T: IceoryxSend> IceoryxSend for [T] {}
+
+unsafe impl<T: ZeroCopySend> __InternalNoTouchyFishy for T {}
+impl<T: ZeroCopySend> IceoryxSend for T {}

@@ -10,7 +10,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Trait for types that can be uniquely identified by their [`TypeName::type_name()`].
+use crate::zero_copy_send::ZeroCopySend;
+
+/// Trait for types that can be uniquely identified by their [`TypeName::type_name()`].
+///
 /// # Safety
 ///
 /// See Safety section of [`TypeName::type_name()`].
@@ -24,5 +27,11 @@ pub unsafe trait TypeName {
     ///    the same memory layout.
     unsafe fn type_name() -> &'static str {
         core::any::type_name::<Self>()
+    }
+}
+
+unsafe impl<T: ZeroCopySend + ?Sized> TypeName for T {
+    unsafe fn type_name() -> &'static str {
+        unsafe { T::type_name() }
     }
 }

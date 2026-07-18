@@ -10,9 +10,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::iceoryx_send::*;
-use crate::type_name::TypeName;
-
 /// Marks types that can be sent to another process in a zero-copy manner, i.e. the types can be
 /// safely used from within different process address spaces and can be uniquely identified by their
 /// [`ZeroCopySend::type_name()`] in an inter-process communication context.
@@ -32,7 +29,7 @@ use crate::type_name::TypeName;
 ///  * the types must have a uniform memory representation, meaning they are annotated with
 ///    `#[repr(C)]`.
 ///
-pub unsafe trait ZeroCopySend: TypeName {
+pub unsafe trait ZeroCopySend {
     /// The unique identifier of the type. It shall be used to identify a specific type across
     /// processes and languages.
     ///
@@ -78,12 +75,3 @@ unsafe impl<T: ZeroCopySend> ZeroCopySend for core::mem::MaybeUninit<T> {}
 
 // Note: `ZeroCopySend` cannot be implemented for tuples because `#[repr(C)]` can only be applied
 // to structs, enums, and unions.
-
-unsafe impl<T: ZeroCopySend> __InternalNoTouchyFishy for T {}
-impl<T: ZeroCopySend> IceoryxSend for T {}
-
-unsafe impl<T: ZeroCopySend + ?Sized> TypeName for T {
-    unsafe fn type_name() -> &'static str {
-        unsafe { <T as ZeroCopySend>::type_name() }
-    }
-}

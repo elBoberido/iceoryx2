@@ -15,6 +15,7 @@ use core::alloc::Layout;
 use iceoryx2_bb_container::string::*;
 use iceoryx2_bb_derive_macros::ZeroCopySend;
 use iceoryx2_bb_elementary::math::align;
+use iceoryx2_bb_elementary_traits::type_name::TypeName as TraitTypeName;
 use iceoryx2_bb_elementary_traits::zero_copy_send::ZeroCopySend;
 use iceoryx2_log::fatal_panic;
 use serde::{Deserialize, Serialize};
@@ -68,15 +69,13 @@ pub struct TypeDetail {
 impl TypeDetail {
     /// Creates a new [`TypeDetail`] from the provided `T`. The [`TypeVariant`] defines if
     /// the type is part of a slice or directly contained.
-    pub fn new<T: iceoryx2_bb_elementary_traits::type_name::TypeName>(
-        variant: TypeVariant,
-    ) -> Self {
+    pub fn new<T: TraitTypeName>(variant: TypeVariant) -> Self {
         Self {
             variant,
             type_name: unsafe {
                 fatal_panic!(
                     from "TypeDetail::__internal_new::<T>()",
-                    when TypeName::try_from(<T as iceoryx2_bb_elementary_traits::type_name::TypeName>::type_name()),
+                    when TypeName::try_from(<T as TraitTypeName>::type_name()),
                     "Name of type T does not fit into fixed-size TypeNameString"
                 )
             },

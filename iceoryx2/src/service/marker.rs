@@ -57,3 +57,9 @@ unsafe impl<T> TypeName for Flatbuffer<T> {
         "iox2::Flatbuffer"
     }
 }
+
+unsafe impl<T> TypeName for PayloadUninit<Flatbuffer<T>> {
+    unsafe fn type_name() -> &'static str {
+        "iox2::Flatbuffer"
+    }
+}
