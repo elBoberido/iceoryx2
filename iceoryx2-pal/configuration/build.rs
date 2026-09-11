@@ -16,6 +16,8 @@ fn main() {
 
 fn configure_configuration_override() {
     println!("cargo:rustc-check-cfg=cfg(configuration_override)");
+    println!("cargo:rustc-check-cfg=cfg(iceoryx2_custom_pal_config)");
+    println!("cargo:rustc-check-cfg=cfg(iceoryx2_custom_cal_recommended)");
 
     if let Ok(configuration_path) = std::env::var("IOX2_CUSTOM_PLATFORM_CONFIGURATION_PATH") {
         println!(

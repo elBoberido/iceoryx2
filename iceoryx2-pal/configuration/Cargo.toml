@@ -10,4 +10,27 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 version = { workspace = true }
 
-[build-dependencies]
+[features]
+default = [ "auto" ]
+auto = [
+    "dep:iceoryx2-pal-configuration-generic",
+    "dep:iceoryx2-pal-configuration-nto",
+    "dep:iceoryx2-pal-configuration-windows",
+]
+# custom = ["dep:iceoryx2-pal-configuration-custom"]
+# custom = ["dep:iceoryx"]
+custom = []
+
+[dependencies]
+# iceoryx2-pal-configuration-custom = { git = "https://iceoryx.io/pal-configuration-custom.git", optional = true }
+# iceoryx = { version = "*", optional = true }
+iceoryx = { version = "*" }
+
+[target.'cfg(not(any(target_os = "nto", target_os = "windows")))'.dependencies]
+iceoryx2-pal-configuration-generic = { workspace = true, optional = true }
+
+[target.'cfg( target_os = "nto")'.dependencies]
+iceoryx2-pal-configuration-nto = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+iceoryx2-pal-configuration-windows = { workspace = true, optional = true }
