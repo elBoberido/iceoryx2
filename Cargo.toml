@@ -69,6 +69,10 @@ members = [
     "iceoryx2-pal/posix/",
     "iceoryx2-pal/print/",
     "iceoryx2-pal/configuration/",
+    # "iceoryx2-pal/configuration/configuration-custom",
+    "iceoryx2-pal/configuration/configuration-generic",
+    "iceoryx2-pal/configuration/configuration-nto",
+    "iceoryx2-pal/configuration/configuration-windows",
     "iceoryx2-pal/testing/",
     "iceoryx2-pal/os-api",
 
@@ -138,6 +142,10 @@ iceoryx2-pal-posix = { version = "0.9.999", path = "iceoryx2-pal/posix/" }
 iceoryx2-pal-print = { version = "0.9.999", path = "iceoryx2-pal/print/" }
 iceoryx2-pal-os-api = { version = "0.9.999", path = "iceoryx2-pal/os-api/" }
 iceoryx2-pal-configuration = { version = "0.9.999", path = "iceoryx2-pal/configuration/" }
+# iceoryx2-pal-configuration-custom = { version = "0.9.999", path = "iceoryx2-pal/configuration/configuration-custom" }
+iceoryx2-pal-configuration-generic = { version = "0.9.999", path = "iceoryx2-pal/configuration/configuration-generic" }
+iceoryx2-pal-configuration-nto = { version = "0.9.999", path = "iceoryx2-pal/configuration/configuration-nto" }
+iceoryx2-pal-configuration-windows = { version = "0.9.999", path = "iceoryx2-pal/configuration/configuration-windows" }
 iceoryx2-pal-testing = { version = "0.9.999", path = "iceoryx2-pal/testing/" }
 iceoryx2-cal = { version = "0.9.999", path = "iceoryx2-cal" }
 iceoryx2-cal-conformance-tests = { version = "0.9.999", path = "iceoryx2-cal/conformance-tests"}
