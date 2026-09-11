@@ -54,6 +54,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
                 while let Ok(Some(sample)) = subscriber.receive() {
                     let _ = publisher.send_copy(*sample);
                     let _ = notifier.notify();
+                    coutln!("Received ping: {} ... sent pong as response", *sample);
                 }
             },
             CYCLE_TIME,

@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
     let subscriber = pong_pub_sub_service.subscriber_builder().create()?;
 
     let mut counter: u64 = 0;
-    while node.wait(Duration::from_millis(1000)).is_ok() {
+    while node.wait(Duration::from_millis(1)).is_ok() {
         counter += 1;
         coutln!("Send ping: {counter}");
         let start = Time::now().unwrap();
